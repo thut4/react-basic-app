@@ -1,36 +1,34 @@
 import React, {useEffect,useState}  from "react";
 import { Link, Routes, Route } from "react-router-dom";
 import PostDetail from "./PostDetail";
+import { fetchPosts, setPage } from "./postsSlice";
+import { useSelector, useDispatch } from "react-redux";
+
 
 function PostsList() {
-  const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
+  const dispatch = useDispatch();
+  const { list, loading, page } = useSelector((state) => state.posts);
+
+  // Keep track of read posts locally
   const [readPosts, setReadPosts] = useState(new Set());
 
   useEffect(() => {
-    // Load read posts from localStorage
-    const savedReadPosts = localStorage.getItem('readPosts');
-    if (savedReadPosts) {
-      setReadPosts(new Set(JSON.parse(savedReadPosts)));
+    // Load from localStorage when component mounts
+    const saved = localStorage.getItem("readPosts");
+    if (saved) {
+      setReadPosts(new Set(JSON.parse(saved)));
     }
   }, []);
 
   useEffect(() => {
-    setLoading(true);
-    fetch(`https://jsonplaceholder.typicode.com/posts?_page=${page}&_limit=5`)
-      .then((res) => res.json())
-      .then((data) => {
-        setPosts(data);
-        setLoading(false);
-      });
-  }, [page]);
+    dispatch(fetchPosts(page));
+  }, [dispatch, page]);
 
   const markAsRead = (postId) => {
     const newReadPosts = new Set(readPosts);
     newReadPosts.add(postId);
     setReadPosts(newReadPosts);
-    localStorage.setItem('readPosts', JSON.stringify([...newReadPosts]));
+    localStorage.setItem("readPosts", JSON.stringify([...newReadPosts]));
   };
 
   if (loading) {
@@ -43,7 +41,24 @@ function PostsList() {
           height: "50vh",
         }}
       >
-        <div className="loader"></div>
+        <div
+          style={{
+            border: "6px solid #f3f3f3",
+            borderTop: "6px solid #4caf50",
+            borderRadius: "50%",
+            width: "50px",
+            height: "50px",
+            animation: "spin 1s linear infinite",
+          }}
+        ></div>
+        <style>
+          {`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+          `}
+        </style>
       </div>
     );
   }
@@ -52,23 +67,26 @@ function PostsList() {
     <div style={{ maxWidth: "600px", margin: "0 auto", padding: "20px" }}>
       <h2 style={{ textAlign: "center" }}>Posts (Page {page})</h2>
 
-      {posts.map((post) => {
+      {list.map((post) => {
         const isRead = readPosts.has(post.id);
+
         return (
           <div
             key={post.id}
             style={{
-              border: `1px solid ${isRead ? '#4CAF50' : '#ddd'}`,
+              border: `1px solid ${isRead ? "#4CAF50" : "#ddd"}`,
               borderRadius: "8px",
               padding: "16px",
               marginBottom: "16px",
-              boxShadow: "1 2px 5px rgba(0,0,0,0.3)",
-              backgroundColor: isRead ? '#f8fff8' : '#fff',
-              opacity: isRead ? 0.8 : 1,
+              boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
+              backgroundColor: isRead ? "#f8fff8" : "#fff",
+              opacity: isRead ? 0.85 : 1,
             }}
           >
-            <h3 style={{ color: isRead ? '#2E7D32' : '#333' }}>{post.title}</h3>
-            <p style={{ color: isRead ? '#555' : '#666' }}>{post.body.substring(0, 100)}...</p>
+            <h3 style={{ color: isRead ? "#2E7D32" : "#333" }}>{post.title}</h3>
+            <p style={{ color: isRead ? "#555" : "#666" }}>
+              {post.body.substring(0, 100)}...
+            </p>
             <Link to={`/post/${post.id}`} onClick={() => markAsRead(post.id)}>
               <button
                 style={{
@@ -80,19 +98,29 @@ function PostsList() {
                   cursor: "pointer",
                   transition: "0.3s ease",
                 }}
-                onMouseOver={(e) => (e.target.style.backgroundColor = isRead ? "#45a049" : "#0056b3")}
-                onMouseOut={(e) => (e.target.style.backgroundColor = isRead ? "#4CAF50" : "#007bff")}
+                onMouseOver={(e) =>
+                  (e.target.style.backgroundColor = isRead
+                    ? "#45a049"
+                    : "#0056b3")
+                }
+                onMouseOut={(e) =>
+                  (e.target.style.backgroundColor = isRead
+                    ? "#4CAF50"
+                    : "#007bff")
+                }
               >
                 {isRead ? "Read Again" : "Read More"}
               </button>
             </Link>
             {isRead && (
-              <span style={{ 
-                marginLeft: "10px", 
-                color: "#4CAF50", 
-                fontSize: "12px",
-                fontStyle: "italic"
-              }}>
+              <span
+                style={{
+                  marginLeft: "10px",
+                  color: "#4CAF50",
+                  fontSize: "12px",
+                  fontStyle: "italic",
+                }}
+              >
                 ✓ Read
               </span>
             )}
@@ -104,7 +132,7 @@ function PostsList() {
       <div style={{ marginTop: "20px", textAlign: "center" }}>
         <button
           disabled={page === 1}
-          onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+          onClick={() => dispatch(setPage(page - 1))}
           style={{
             padding: "8px 16px",
             borderRadius: "8px",
@@ -118,7 +146,7 @@ function PostsList() {
           Prev
         </button>
         <button
-          onClick={() => setPage((prev) => prev + 1)}
+          onClick={() => dispatch(setPage(page + 1))}
           style={{
             marginLeft: "10px",
             padding: "8px 16px",
@@ -149,5 +177,3 @@ function App() {
 }
 
 export default App;
-
-
